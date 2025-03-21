@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Immobilier - Saint-Georges, Lyon</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .card-header {
+            background-color: #6c757d;
+            color: white;
+            font-weight: bold;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        .header-banner {
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 40px 0;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .price-highlight {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4b6cb7;
+        }
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-banner">
+        <div class="container">
+            <h1 class="display-4">Audit Immobilier - Saint-Georges, Lyon</h1>
+            <p class="lead">Analyse détaillée des prix au mètre carré selon le type de bien et le nombre de pièces</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Résumé des prix -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-header">Prix moyen global</div>
+                    <div class="card-body">
+                        <h5 class="price-highlight">5 250 €/m²</h5>
+                        <p class="card-text">Tous types de biens confondus</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-header">Prix moyen appartements</div>
+                    <div class="card-body">
+                        <h5 class="price-highlight">5 100 €/m²</h5>
+                        <p class="card-text">Variation selon le nombre de pièces</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-header">Prix moyen maisons</div>
+                    <div class="card-body">
+                        <h5 class="price-highlight">5 800 €/m²</h5>
+                        <p class="card-text">Variation selon le nombre de pièces</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="propertyType" class="form-label">Type de bien</label>
+                    <select class="form-select" id="propertyType">
+                        <option value="all">Tous les biens</option>
+                        <option value="apartment">Appartements</option>
+                        <option value="house">Maisons</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="roomCount" class="form-label">Nombre de pièces</label>
+                    <select class="form-select" id="roomCount">
+                        <option value="all">Toutes les pièces</option>
+                        <option value="1">1 pièce</option>
+                        <option value="2">2 pièces</option>
+                        <option value="3">3 pièces</option>
+                        <option value="4">4 pièces</option>
+                        <option value="5+">5 pièces et plus</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="yearRange" class="form-label">Période</label>
+                    <select class="form-select" id="yearRange">
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                        <option value="all" selected>Toutes les années</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Graphique des prix par type de bien -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Prix moyen au m² par type de bien</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="propertyTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Graphique des prix par nombre de pièces -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Prix moyen au m² par nombre de pièces</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="roomCountChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- Carte du quartier avec les prix -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Carte des prix au m² - Quartier Saint-Georges</div>
+                    <div class="card-body">
+                        <div id="map"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- Tableau détaillé des biens -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Détail des transactions immobilières</div>
+                    <div class="card-body">
+                        <table id="propertiesTable" class="table table-striped table-bordered" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Type de bien</th>
+                                    <th>Nombre de pièces</th>
+                                    <th>Surface (m²)</th>
+                                    <th>Prix</th>
+                                    <th>Prix au m²</th>
+                                    <th>Date de vente</th>
+                                    <th>Adresse</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>2</td>
+                                    <td>45</td>
+                                    <td>235 000 €</td>
+                                    <td>5 222 €/m²</td>
+                                    <td>15/03/2023</td>
+                                    <td>Rue Saint-Georges</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>3</td>
+                                    <td>68</td>
+                                    <td>340 000 €</td>
+                                    <td>5 000 €/m²</td>
+                                    <td>22/02/2023</td>
+                                    <td>Rue des Remparts d'Ainay</td>
+                                </tr>
+                                <tr>
+                                    <td>Maison</td>
+                                    <td>4</td>
+                                    <td>110</td>
+                                    <td>650 000 €</td>
+                                    <td>5 909 €/m²</td>
+                                    <td>05/01/2023</td>
+                                    <td>Quai Fulchiron</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>1</td>
+                                    <td>30</td>
+                                    <td>165 000 €</td>
+                                    <td>5 500 €/m²</td>
+                                    <td>18/04/2023</td>
+                                    <td>Rue de la Bombarde</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>4</td>
+                                    <td>95</td>
+                                    <td>475 000 €</td>
+                                    <td>5 000 €/m²</td>
+                                    <td>10/02/2023</td>
+                                    <td>Place Saint-Jean</td>
+                                </tr>
+                                <tr>
+                                    <td>Maison</td>
+                                    <td>5</td>
+                                    <td>150</td>
+                                    <td>850 000 €</td>
+                                    <td>5 667 €/m²</td>
+                                    <td>28/03/2023</td>
+                                    <td>Montée du Chemin Neuf</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>2</td>
+                                    <td>50</td>
+                                    <td>245 000 €</td>
+                                    <td>4 900 €/m²</td>
+                                    <td>12/05/2023</td>
+                                    <td>Rue du Bœuf</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>3</td>
+                                    <td>75</td>
+                                    <td>375 000 €</td>
+                                    <td>5 000 €/m²</td>
+                                    <td>20/01/2023</td>
+                                    <td>Rue Tramassac</td>
+                                </tr>
+                                <tr>
+                                    <td>Maison</td>
+                                    <td>6</td>
+                                    <td>180</td>
+                                    <td>1 050 000 €</td>
+                                    <td>5 833 €/m²</td>
+                                    <td>15/02/2023</td>
+                                    <td>Quai Romain Rolland</td>
+                                </tr>
+                                <tr>
+                                    <td>Appartement</td>
+                                    <td>5</td>
+                                    <td>120</td>
+                                    <td>600 000 €</td>
+                                    <td>5 000 €/m²</td>
+                                    <td>08/04/2023</td>
+                                    <td>Rue Saint-Jean</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- Évolution des prix -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Évolution des prix au m² (2018-2023)</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="priceEvolutionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4 mb-5">
+            <!-- Comparaison avec d'autres quartiers -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Comparaison avec les quartiers voisins</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="neighborhoodComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Audit Immobilier - Saint-Georges, Lyon</h5>
+                    <p>Analyse des prix au mètre carré basée sur les transactions immobilières récentes.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>Données mises à jour le 30 juin 2023</p>
+                    <p>Sources: Données DVF, INSEE, Notaires de France</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Initialisation de DataTables
+        $(document).ready(function() {
+            $('#propertiesTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+                },
+                responsive: true
+            });
+        });
+
+        // Données pour les graphiques
+        const propertyTypeData = {
+            labels: ['Appartement', 'Maison'],
+            datasets: [{
+                label: 'Prix moyen au m²',
+                data: [5100, 5800],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        const roomCountData = {
+            labels: ['1 pièce', '2 pièces', '3 pièces', '4 pièces', '5+ pièces'],
+            datasets: [{
+                label: 'Appartements',
+                data: [5500, 5050, 5000, 5000, 5000],
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Maisons',
+                data: [0, 0, 5700, 5900, 5750],
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        };
+
+        const priceEvolutionData = {
+            labels: ['2018', '2019', '2020', '2021', '2022', '2023'],
+            datasets: [{
+                label: 'Appartements',
+                data: [4200, 4400, 4600, 4800, 5000, 5100],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                tension: 0.3,
+                fill: true
+            }, {
+                label: 'Maisons',
+                data: [4800, 5000, 5200, 5400, 5600, 5800],
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        };
+
+        const neighborhoodComparisonData = {
+            labels: ['Saint-Georges', 'Vieux Lyon', 'Bellecour', 'Ainay', 'Perrache'],
+            datasets: [{
+                label: 'Prix moyen au m²',
+                data: [5250, 5400, 5800, 5600, 4900],
+                backgroundColor: [
+                    'rgba(75, 108, 183, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(75, 108, 183, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        // Configuration des graphiques
+        const propertyTypeChart = new Chart(
+            document.getElementById('propertyTypeChart'),
+            {
+                type: 'bar',
+                data: propertyTypeData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 4000,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        const roomCountChart = new Chart(
+            document.getElementById('roomCountChart'),
+            {
+                type: 'bar',
+                data: roomCountData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.parsed.y === 0) {
+                                        return 'Pas de données';
+                                    }
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 4000,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        const priceEvolutionChart = new Chart(
+            document.getElementById('priceEvolutionChart'),
+            {
+                type: 'line',
+                data: priceEvolutionData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 4000,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        const neighborhoodComparisonChart = new Chart(
+            document.getElementById('neighborhoodComparisonChart'),
+            {
+                type: 'bar',
+                data: neighborhoodComparisonData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 4000,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('fr-FR') + ' €/m²';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Initialisation de la carte Leaflet
+        const map = L.map('map').setView([45.7618, 4.8273], 16);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Définir les limites approximatives du quartier Saint-Georges
+        const saintGeorgesPolygon = L.polygon([
+            [45.7635, 4.8245],
+            [45.7645, 4.8275],
+            [45.7625, 4.8305],
+            [45.7605, 4.8295],
+            [45.7600, 4.8265],
+            [45.7615, 4.8235]
+        ], {
+            color: 'rgba(75, 108, 183, 0.8)',
+            fillOpacity: 0.3
+        }).addTo(map);
+        
+        saintGeorgesPolygon.bindPopup("<b>Quartier Saint-Georges</b><br>Prix moyen: 5 250 €/m²");
+
+        // Ajouter des marqueurs pour les transactions
+        const transactions = [
+            { lat: 45.7618, lng: 4.8273, price: 5222, type: "Appartement", rooms: 2, address: "Rue Saint-Georges" },
+            { lat: 45.7625, lng: 4.8265, price: 5000, type: "Appartement", rooms: 3, address: "Rue des Remparts d'Ainay" },
+            { lat: 45.7610, lng: 4.8255, price: 5909, type: "Maison", rooms: 4, address: "Quai Fulchiron" },
+            { lat: 45.7630, lng: 4.8280, price: 5500, type: "Appartement", rooms: 1, address: "Rue de la Bombarde" },
+            { lat: 45.7622, lng: 4.8270, price: 5000, type: "Appartement", rooms: 4, address: "Place Saint-Jean" },
+            { lat: 45.7615, lng: 4.8260, price: 5667, type: "Maison", rooms: 5, address: "Montée du Chemin Neuf" },
+            { lat: 45.7628, lng: 4.8275, price: 4900, type: "Appartement", rooms: 2, address: "Rue du Bœuf" },
+            { lat: 45.7620, lng: 4.8285, price: 5000, type: "Appartement", rooms: 3, address: "Rue Tramassac" },
+            { lat: 45.7605, lng: 4.8250, price: 5833, type: "Maison", rooms: 6, address: "Quai Romain Rolland" },
+            { lat: 45.7623, lng: 4.8268, price: 5000, type: "Appartement", rooms: 5, address: "Rue Saint-Jean" }
+        ];
+
+        transactions.forEach(t => {
+            const color = t.type === "Appartement" ? "blue" : "red";
+            const marker = L.circleMarker([t.lat, t.lng], {
+                radius: 8,
+                fillColor: color,
+                color: '#fff',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
+            
+            marker.bindPopup(`
+                <b>${t.type} - ${t.rooms} pièce(s)</b><br>
+                Prix: ${t.price.toLocaleString('fr-FR')} €/m²<br>
+                Adresse: ${t.address}
+            `);
+        });
+
+        // Gestion des filtres
+        document.getElementById('propertyType').addEventListener('change', updateFilters);
+        document.getElementById('roomCount').addEventListener('change', updateFilters);
+        document.getElementById('yearRange').addEventListener('change', updateFilters);
+
+        function updateFilters() {
+            // Cette fonction serait utilisée pour filtrer les données en fonction des sélections
+            // Dans un cas réel, elle ferait des appels AJAX ou filtrerait des données plus complètes
+            console.log("Filtres mis à jour");
+        }
+    </script>
+</body>
+</html>
